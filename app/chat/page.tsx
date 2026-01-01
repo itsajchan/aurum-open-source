@@ -19,23 +19,6 @@ export default function ChatPage() {
         <div className="mb-8">
           <ChatInterface />
         </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <button className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-amber-500 dark:hover:border-amber-500 transition-colors flex flex-col items-center gap-3 group">
-            <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Plus size={20} />
-            </div>
-            <span className="font-medium text-sm">Add Item</span>
-          </button>
-
-          <button className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-amber-500 dark:hover:border-amber-500 transition-colors flex flex-col items-center gap-3 group">
-            <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Camera size={20} />
-            </div>
-            <span className="font-medium text-sm">Scan Photo</span>
-          </button>
-        </div>
       </main>
 
       {/* Footer */}

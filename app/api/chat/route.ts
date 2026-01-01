@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { openai } from "@/lib/openai";
 import { prisma } from "@/lib/prisma";
-import { generateEmbedding, itemToEmbeddingText } from "@/lib/ollama";
+import { generateEmbedding, itemToEmbeddingText, chat, chatJSON } from "@/lib/ollama";
 import { toSql } from "pgvector";
 import type { IntentResponse, ChatResponse, Item } from "@/lib/types/intent";
-
-const LLM_MODEL = process.env.LLM_MODEL || "llama3.2:3b";
 
 function buildSystemPrompt(userItems: Item[]): string {
   const itemsList = userItems.length > 0
@@ -69,26 +66,14 @@ Always respond with valid JSON only, no additional text.`;
 async function parseIntent(userMessage: string, userItems: Item[]): Promise<IntentResponse> {
   const systemPrompt = buildSystemPrompt(userItems);
   
-  const response = await openai.chat.completions.create({
-    model: LLM_MODEL,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userMessage },
-    ],
-    response_format: { type: "json_object" },
-    temperature: 0.1,
-  });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    return {
-      intent: "UNKNOWN",
-      data: { message: "I couldn't understand that. Please try again." },
-    };
-  }
-
   try {
-    return JSON.parse(content) as IntentResponse;
+    return await chatJSON<IntentResponse>(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
+      ],
+      { temperature: 0.1 }
+    );
   } catch {
     return {
       intent: "UNKNOWN",
@@ -124,17 +109,13 @@ ${itemsContext}
 
 Confirm the addition naturally and conversationally. Be concise and friendly.`;
 
-  const response = await openai.chat.completions.create({
-    model: LLM_MODEL,
-    messages: [
+  return await chat(
+    [
       { role: "system", content: systemPrompt },
       { role: "user", content: userMessage },
     ],
-    temperature: 0.7,
-    max_tokens: 150,
-  });
-
-  return response.choices[0]?.message?.content || "I processed your request.";
+    { temperature: 0.7 }
+  );
 }
 
 async function handleAddItem(

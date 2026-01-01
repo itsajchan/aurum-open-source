@@ -2,7 +2,7 @@ import { Package, LayoutGrid, MessageSquare, Github, Twitter, Linkedin } from "l
 import Link from "next/link";
 
 interface HeaderProps {
-  activePage?: "home" | "chat" | "inventory";
+  activePage?: "dashboard" | "inventory";
 }
 
 export default function Header({ activePage }: HeaderProps) {
@@ -23,7 +23,7 @@ export default function Header({ activePage }: HeaderProps) {
             <Link
               href="/chat"
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activePage === "chat"
+                activePage === "dashboard"
                   ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
                   : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
               }`}
