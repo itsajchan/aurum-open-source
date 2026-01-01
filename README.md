@@ -1,36 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Aurum Open Source
 
-## Getting Started
+**AI-Powered Home Inventory Management**
 
-First, run the development server:
+Track, organize, and chat with your home inventory using AI. Built with Next.js, PostgreSQL (pgvector), and Ollama for 100% local AI processing.
+
+## Features
+
+- 🤖 **Natural Language Interface** - Add and search items using conversational AI
+- 🔍 **Semantic Search** - Find items even with fuzzy descriptions using vector embeddings
+- 📍 **Location-Based Organization** - Group items by where they're stored
+- � **Voice Input** - Describe items verbally using faster-whisper transcription
+- 📷 **Image Recognition** - Take photos of items and let Qwen VL identify them
+- �🏠 **100% Local** - All AI processing runs locally with Ollama (no data leaves your machine)
+- 🚀 **Fast & Modern** - Built with Next.js 16, React 19, and TailwindCSS
+
+## Prerequisites
+
+- Node.js 24+
+- Docker (for PostgreSQL with pgvector)
+- [Ollama](https://ollama.ai) installed locally
+- Python 3.10+ (for voice transcription server)
+
+## Quick Start
+
+### 1. Clone and Install
+
+```bash
+git clone https://github.com/itsajchan/aurum-open-source.git
+cd aurum-open-source
+npm install
+```
+
+### 2. Start PostgreSQL with pgvector
+
+```bash
+docker-compose -f docker-compose-dev.yaml up -d
+```
+
+### 3. Pull Required Ollama Models
+
+```bash
+# Embedding model for semantic search
+ollama pull embeddinggemma:300m
+
+# LLM for natural language understanding
+ollama pull llama3.2:3b
+
+# Vision model for image recognition (optional)
+ollama pull qwen3-vl
+```
+
+### 4. Configure Environment
+
+```bash
+cp env.example .env
+# Edit .env if needed (defaults work out of the box)
+```
+
+### 5. Initialize Database
+
+```bash
+npx prisma generate
+npx prisma db push
+```
+
+### 6. (Optional) Start Voice Transcription Server
+
+For voice input functionality:
+
+```bash
+cd faster-whisper
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python server.py
+```
+
+This starts the faster-whisper server on port 9000.
+
+### 7. Run the App
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to start using Aurum!
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Adding Items
+Just describe your items naturally:
+- "I have 3 bottles of shampoo in the bathroom cabinet"
+- "Add my new headphones to the office desk drawer"
 
-## Learn More
+### Finding Items
+Ask questions about your inventory:
+- "Where did I put the extra toothpaste?"
+- "Do I have any batteries?"
 
-To learn more about Next.js, take a look at the following resources:
+### Voice Input
+Click "Add Items" on any location, then "Start Recording" to describe items verbally. You can say something like "I have two toilet paper rolls, one comb, 15 razor blade replacements, and 2 boxes of QTips."
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Image Recognition
+Click "Take Photo" to capture items and let the AI identify them automatically.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tech Stack
 
-## Deploy on Vercel
+- **Framework**: Next.js 16 (App Router)
+- **Database**: PostgreSQL with pgvector extension
+- **AI/ML**: 
+  - Ollama (embeddinggemma:300m for embeddings)
+  - Ollama (llama3.2:3b for chat/parsing)
+  - Ollama (qwen3-vl for image recognition)
+  - faster-whisper (for voice transcription)
+- **ORM**: Prisma
+- **Styling**: TailwindCSS
+- **Icons**: Lucide React
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Author
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built with ❤️ by **Adam Chan**
+
+- Twitter: [@itsajchan](https://twitter.com/itsajchan)
+- LinkedIn: [linkedin.com/in/itsajchan](https://linkedin.com/in/itsajchan)
+- GitHub: [github.com/itsajchan](https://github.com/itsajchan)
+
+## License
+
+MIT License - feel free to use this for your own projects!

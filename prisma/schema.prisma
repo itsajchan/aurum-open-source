@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+model Item {
+  id            String    @id @default(cuid())
+  
+  name          String
+  description   String?
+  location      String?
+  quantity      Int       @default(1)
+  usageFrequency String?
+  image         String?
+  
+  // Embedding for semantic search (requires pgvector extension)
+  // 768 dimensions for embeddinggemma:300m model
+  embedding     Unsupported("vector(768)")?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}

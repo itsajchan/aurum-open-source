@@ -1,0 +1,12 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17 # PostgreSQL with pgvector support
+    container_name: aurum-pgvector-db
+    environment:
+      POSTGRES_USER: aurum_user
+      POSTGRES_PASSWORD: S3cret
+      POSTGRES_DB: aurum_db
+    ports:
+      - "5438:5432"
+    volumes:
+      - ~/apps/postgres_aurum_oss:/var/lib/postgresql/data
