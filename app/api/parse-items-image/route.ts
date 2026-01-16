@@ -1,30 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import ollama from "ollama";
 
 interface ParsedItem {
   itemName: string;
   quantity: number;
 }
 
-const VISION_MODEL = process.env.VISION_MODEL || "qwen3-vl";
+const VISION_MODEL = process.env.VISION_MODEL || "qwen3-vl:latest";
 
-const SYSTEM_PROMPT = `You are a helpful assistant that identifies inventory items from images.
+const SYSTEM_PROMPT = `Identify items in this image. Return ONLY valid JSON, no explanation.
 
-Given an image of items (such as a pantry, shelf, storage area, or individual items), identify each item visible and return a JSON array.
+Format: {"items": [{"itemName": "item name", "quantity": 1}]}
 
-Each item should have:
-- itemName: The name of the item (string)
-- quantity: The number of items visible (number, default to 1 if not clearly countable)
-
-Rules:
-- Identify ALL visible items in the image
-- If quantity is not clearly visible, assume 1
-- Keep item names concise but descriptive
-- Include brand names if clearly visible (e.g., "Tide laundry detergent")
-- Group identical items together with their count
-
-Return a JSON object with an "items" array containing the identified items.
-Example output: {"items": [{"itemName": "boxes of tissues", "quantity": 3}, {"itemName": "hand soap", "quantity": 1}]}`;
+Be concise with item names. Return JSON immediately:`;
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,18 +30,37 @@ export async function POST(request: NextRequest) {
     console.log("Processing image for item extraction, size:", buffer.length);
 
     try {
-      const response = await ollama.chat({
-        model: VISION_MODEL,
-        messages: [
-          {
-            role: "user",
-            content: SYSTEM_PROMPT,
-            images: [base64Image],
+      const ollamaHost = process.env.OLLAMA_HOST || "http://localhost:11434";
+      const chatResponse = await fetch(`${ollamaHost}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: VISION_MODEL,
+          messages: [
+            {
+              role: "user",
+              content: SYSTEM_PROMPT,
+              images: [base64Image],
+            },
+          ],
+          format: "json",
+          stream: false,
+          think: false,
+          options: {
+            num_predict: 4096,
           },
-        ],
+          keep_alive: "10m",
+        }),
+        signal: AbortSignal.timeout(10 * 60 * 1000),
       });
 
-      const content = response.message.content;
+      if (!chatResponse.ok) {
+        throw new Error(`Ollama API error: ${chatResponse.status}`);
+      }
+
+      const response = await chatResponse.json();
+      console.log("Full Ollama response:", JSON.stringify(response, null, 2));
+      const content = response.message?.content || "";
       console.log("Vision model response:", content);
 
       if (!content) {

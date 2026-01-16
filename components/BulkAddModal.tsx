@@ -25,6 +25,7 @@ export default function BulkAddModal({ location, isOpen, onClose, onSuccess }: B
   // Image capture state
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [capturedImageFile, setCapturedImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Voice recording state
@@ -140,6 +141,7 @@ export default function BulkAddModal({ location, isOpen, onClose, onSuccess }: B
       // Create preview for immediate display
       const objectUrl = URL.createObjectURL(file);
       setCapturedImage(objectUrl);
+      setCapturedImageFile(file);
 
       // Send image to API for parsing
       const formData = new FormData();
@@ -180,6 +182,7 @@ export default function BulkAddModal({ location, isOpen, onClose, onSuccess }: B
 
   const clearCapturedImage = () => {
     setCapturedImage(null);
+    setCapturedImageFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -219,6 +222,18 @@ export default function BulkAddModal({ location, isOpen, onClose, onSuccess }: B
     setIsLoading(true);
 
     try {
+      // If we have a captured image, upload it for this location
+      if (capturedImageFile) {
+        const imageFormData = new FormData();
+        imageFormData.append("image", capturedImageFile);
+        imageFormData.append("location", location);
+        
+        await fetch("/api/upload-location-image", {
+          method: "POST",
+          body: imageFormData,
+        });
+      }
+
       const res = await fetch("/api/items/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -234,6 +249,7 @@ export default function BulkAddModal({ location, isOpen, onClose, onSuccess }: B
       
       // Reset form and close
       setItems([{ itemName: "", quantity: 1 }]);
+      setCapturedImageFile(null);
       onSuccess();
       onClose();
     } catch (err) {
@@ -249,6 +265,7 @@ export default function BulkAddModal({ location, isOpen, onClose, onSuccess }: B
       setItems([{ itemName: "", quantity: 1 }]);
       setError(null);
       setCapturedImage(null);
+      setCapturedImageFile(null);
       setTranscript(null);
       onClose();
     }

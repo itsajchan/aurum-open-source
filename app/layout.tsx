@@ -10,6 +10,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Aurum Open Source - AI-Powered Home Inventory",
   description: "Track, organize, and chat with your home inventory using AI. Built by Adam Chan.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

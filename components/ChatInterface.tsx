@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Send, Loader2, Package, MapPin, Hash, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Send, Loader2, Package, MapPin, Hash, Clock, ImageIcon, X } from "lucide-react";
 import type { ChatResponse, Item } from "@/lib/types/intent";
 
 export default function ChatInterface() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<ChatResponse | null>(null);
+  const [viewingImage, setViewingImage] = useState<{ url: string; location: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,24 +111,63 @@ export default function ChatInterface() {
 
           {/* Added Item Display */}
           {response.intent.intent === "ADD_ITEM" && response.result?.item && (
-            <ItemCard item={response.result.item} />
+            <ItemCard item={response.result.item} onViewImage={setViewingImage} />
           )}
 
           {/* Found Items Display */}
           {response.intent.intent === "VIEW_ITEM" && response.result?.items && response.result.items.length > 0 && (
             <div className="space-y-3">
               {response.result.items.map((item) => (
-                <ItemCard key={item.id} item={item} />
+                <ItemCard key={item.id} item={item} onViewImage={setViewingImage} />
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Image Modal */}
+      {viewingImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setViewingImage(null)}
+          />
+          <div className="relative max-w-4xl max-h-[90vh] mx-4">
+            <button
+              onClick={() => setViewingImage(null)}
+              className="absolute -top-10 right-0 p-2 text-white hover:text-neutral-300 transition-colors"
+            >
+              <X size={24} />
+            </button>
+            <img
+              src={viewingImage.url}
+              alt={viewingImage.location}
+              className="max-w-full max-h-[85vh] rounded-lg object-contain"
+            />
+            <p className="text-center text-white mt-2 text-sm">{viewingImage.location}</p>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function ItemCard({ item }: { item: Item }) {
+function ItemCard({ item, onViewImage }: { item: Item; onViewImage: (img: { url: string; location: string }) => void }) {
+  const [locationImage, setLocationImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (item.location) {
+      fetch(`/api/location-images/${encodeURIComponent(item.location)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.imageUrl) {
+            setLocationImage(data.imageUrl);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [item.location]);
+
   return (
     <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700">
       <div className="flex items-start gap-3">
@@ -148,6 +188,15 @@ function ItemCard({ item }: { item: Item }) {
               <span className="flex items-center gap-1">
                 <MapPin size={14} />
                 {item.location}
+                {locationImage && (
+                  <button
+                    onClick={() => onViewImage({ url: locationImage, location: item.location! })}
+                    className="ml-1 p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                    title="View location photo"
+                  >
+                    <ImageIcon size={14} className="text-amber-500" />
+                  </button>
+                )}
               </span>
             )}
             {item.quantity > 1 && (
