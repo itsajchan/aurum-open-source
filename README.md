@@ -4,6 +4,8 @@
 
 Track, organize, and chat with your home inventory using AI. Built with Next.js, PostgreSQL (pgvector), and Ollama for 100% local AI processing.
 
+![Aurum Screenshot](image.png)
+
 ## Features
 
 - 🤖 **Natural Language Interface** - Add and search items using conversational AI

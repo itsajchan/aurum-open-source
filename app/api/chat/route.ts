@@ -4,6 +4,43 @@ import { generateEmbedding, itemToEmbeddingText, chat, chatJSON } from "@/lib/ol
 import { toSql } from "pgvector";
 import type { IntentResponse, ChatResponse, Item } from "@/lib/types/intent";
 
+interface QueryExtraction {
+  searchQuery: string | null;
+  isAddIntent: boolean;
+}
+
+async function extractSearchQuery(userMessage: string): Promise<QueryExtraction> {
+  const systemPrompt = `You are a query extraction assistant. Your job is to extract the specific item or thing the user is looking for from their message.
+
+Rules:
+1. If the user is SEARCHING for something (asking where it is, if they have it, looking for it), extract just the item name.
+2. If the user is ADDING something to inventory, set isAddIntent to true and searchQuery to null.
+3. Extract only the core item name, not descriptors like "my" or "the" or "extra".
+
+Examples:
+- "Where's my toilet paper?" → {"searchQuery": "toilet paper", "isAddIntent": false}
+- "Do I have any batteries?" → {"searchQuery": "batteries", "isAddIntent": false}
+- "Where did I put the extra toothpaste?" → {"searchQuery": "toothpaste", "isAddIntent": false}
+- "I have 3 bottles of shampoo in the bathroom" → {"searchQuery": null, "isAddIntent": true}
+- "Add my new headphones to the desk" → {"searchQuery": null, "isAddIntent": true}
+- "Find my charger" → {"searchQuery": "charger", "isAddIntent": false}
+
+Respond with JSON only: {"searchQuery": "item name" or null, "isAddIntent": true/false}`;
+
+  try {
+    return await chatJSON<QueryExtraction>(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
+      ],
+      { temperature: 0.1 }
+    );
+  } catch {
+    // Fallback: use the full message for search
+    return { searchQuery: userMessage, isAddIntent: false };
+  }
+}
+
 function buildSystemPrompt(userItems: Item[]): string {
   const itemsList = userItems.length > 0
     ? userItems.map(item => {
@@ -14,6 +51,8 @@ function buildSystemPrompt(userItems: Item[]): string {
         return parts.join(", ");
       }).join("\n")
     : "(No items in inventory yet)";
+    console.log(itemsList);
+    console.log("YOUR ITEMS")
 
   return `You are an AI assistant for a home inventory management system called Aurum. 
 Your job is to understand user intent and extract structured data from their natural language input.
@@ -43,22 +82,29 @@ You must respond with a JSON object in one of these formats:
   }
 }
 
-3. When the intent is unclear:
+3. ONLY when the message is completely unrelated to inventory (e.g., "What's the weather?"):
 {
   "intent": "UNKNOWN",
   "data": {
-    "message": "A helpful message asking for clarification"
+    "message": "A helpful message explaining you can only help with inventory"
   }
 }
 
+IMPORTANT RULES:
+- If the user is asking about, searching for, or looking for ANY item, ALWAYS use VIEW_ITEM with the matching item IDs from the inventory.
+- If items exist in the inventory that match the query, include their IDs in itemIds.
+- If no items match, return VIEW_ITEM with an empty itemIds array - do NOT ask for clarification.
+- Do NOT return UNKNOWN for search queries. UNKNOWN is ONLY for non-inventory questions.
+
 Examples:
+- "Where's my toilet paper?" → VIEW_ITEM with itemIds of toilet paper items
 - "I have 3 bottles of shampoo in the bathroom cabinet" → ADD_ITEM with name="shampoo", quantity=3, location="bathroom cabinet"
 - "Where did I put the extra toothpaste?" → VIEW_ITEM with itemIds of matching items from inventory
 - "Add my new headphones to the office desk drawer" → ADD_ITEM with name="headphones", location="office desk drawer"
 - "Do I have any batteries?" → VIEW_ITEM with itemIds of any battery-related items
+- "Find my charger" → VIEW_ITEM with itemIds of charger items
 
-For VIEW_ITEM, search the inventory semantically - match items even if the exact words don't match (e.g., "toothbrush" matches "travel toothbrushes").
-If no items match, return VIEW_ITEM with an empty itemIds array.
+For VIEW_ITEM, match items semantically - "toilet paper" matches "TP", "bathroom tissue", etc.
 
 Always respond with valid JSON only, no additional text.`;
 }
@@ -183,7 +229,7 @@ interface SimilarItem extends Item {
   similarity: number;
 }
 
-const SIMILARITY_THRESHOLD = 0.3;
+const SIMILARITY_THRESHOLD = 0.7;
 
 async function searchSimilarItems(
   query: string,
@@ -230,10 +276,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    // Search for similar items using vector search
-    const similarItems = await searchSimilarItems(message, 10);
+    // Step 1: Extract the search query from the user message
+    const queryExtraction = await extractSearchQuery(message);
+    console.log("[Chat] Query extraction:", queryExtraction);
 
-    // Parse intent using LLM with similar items as context
+    // Step 2: Search for similar items using vector search on the extracted query
+    // Use the extracted search query if available, otherwise fall back to full message
+    const searchTerm = queryExtraction.searchQuery || message;
+    const similarItems = queryExtraction.isAddIntent 
+      ? [] // Skip vector search for add intents
+      : await searchSimilarItems(searchTerm, 10);
+    
+    console.log("[Chat] Similar items found:", similarItems.length, "for query:", searchTerm);
+
+    // Step 3: Parse intent using LLM with similar items as context
     const intent = await parseIntent(message, similarItems);
 
     let result: ChatResponse["result"];
